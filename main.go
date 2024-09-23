@@ -15,11 +15,15 @@ import (
 const (
 	// issuerURL corresponds with `iss` field
 	issuerURL = "https://token.actions.githubusercontent.com"
-	// clientID corresponds with `aud` field, which will be the Github repo
+	// clientID corresponds with `aud` field, which will be set to the Github user/org
 	clientID = "https://github.com/ianb-mp"
 	// limit is the maximum size of the request body
 	limit = 1024 * 1024
 )
+
+type JWTRequest struct {
+	JWT string `json:"jwt"`
+}
 
 func main() {
 	// Define a flag for the listen port
@@ -41,20 +45,18 @@ func main() {
 	// Define the HTTP handler for the JWT endpoint
 	http.HandleFunc("/jwt", func(w http.ResponseWriter, r *http.Request) {
 
-		body, err := io.ReadAll(io.LimitReader(r.Body, limit))
+		var req JWTRequest
+
+		// Decode the request body into the JWTRequest struct
+		err := json.NewDecoder(io.LimitReader(r.Body, limit)).Decode(&req)
 		if err != nil {
-			fmt.Printf("Failed to read JWT: %v", err)
-			http.Error(w, "Failed to read JWT", http.StatusBadRequest)
+			fmt.Printf("Failed to decode request body: %v", err)
+			http.Error(w, "Failed to decode request body", http.StatusBadRequest)
 			return
 		}
 
-		// Parse the JWT from the request body
-		rawIDToken := string(body)
-
-		log.Printf("rawIDToken: %q", rawIDToken)
-
 		// Verify the JWT
-		idToken, err := verifier.Verify(ctx, rawIDToken)
+		idToken, err := verifier.Verify(ctx, req.JWT)
 		if err != nil {
 			fmt.Printf("Failed to verify JWT: %v", err)
 			http.Error(w, "Failed to verify JWT", http.StatusBadRequest)
@@ -63,7 +65,10 @@ func main() {
 
 		// dump token
 		PrintJSON(idToken)
-		//fmt.Printf("%+v", idToken)
+
+		// check other claims like subject
+
+		// return access token
 	})
 
 	// Start the HTTP server
