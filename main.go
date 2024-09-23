@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -50,7 +51,7 @@ func main() {
 		// Decode the request body into the JWTRequest struct
 		err := json.NewDecoder(io.LimitReader(r.Body, limit)).Decode(&req)
 		if err != nil {
-			fmt.Printf("Failed to decode request body: %v", err)
+			log.Printf("Failed to decode request body: %v", err)
 			http.Error(w, "Failed to decode request body", http.StatusBadRequest)
 			return
 		}
@@ -58,13 +59,14 @@ func main() {
 		// Verify the JWT
 		idToken, err := verifier.Verify(ctx, req.JWT)
 		if err != nil {
-			fmt.Printf("Failed to verify JWT: %v", err)
+			log.Printf("Failed to verify JWT: %v", err)
 			http.Error(w, "Failed to verify JWT", http.StatusBadRequest)
 			return
 		}
 
-		// dump token
-		PrintJSON(idToken)
+		buf := bytes.NewBuffer(nil)
+		PrintJSON(buf, idToken)
+		log.Printf("JWT verified: %s", buf.String())
 
 		// check other claims like subject
 
@@ -78,7 +80,7 @@ func main() {
 }
 
 // https://www.reddit.com/r/golang/comments/gritgv/comment/fs3gdtu/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button
-func PrintJSON(obj interface{}) {
+func PrintJSON(w io.Writer, obj interface{}) {
 	bytes, _ := json.MarshalIndent(obj, "", "  ")
-	fmt.Println(string(bytes))
+	fmt.Fprintf(w, "%s\n", string(bytes))
 }
