@@ -66,6 +66,7 @@ func main() {
 
 		buf := bytes.NewBuffer(nil)
 		PrintJSON(buf, idToken)
+		log.Printf("raw token: %s", req.JWT)
 		log.Printf("JWT verified: %s", buf.String())
 
 		// check other claims like subject
