@@ -8,3 +8,5 @@ As per [Github Docs](https://docs.github.com/en/actions/security-for-github-acti
 - POST the JWT to our cloud provider's token endpoint
 - receive an access token from the cloud provider
 
+The `oidc-rp` Go binary runs on the cloud provider side and receives the Github ID yoken & verifies it.
+
