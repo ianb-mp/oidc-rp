@@ -2,7 +2,8 @@ name: "OIDC test"
 
 on:
   push:
-    - dev
+    branches:
+      - dev
 
 #env:
 
@@ -35,21 +36,13 @@ jobs:
             core.setOutput('TOKEN', token.trim())
             core.setOutput('IDTOKENURL', runtimeUrl.trim())
 
-        - name: Fetch the ID Token
-          id: tokenid
-          run: |
-            IDTOKEN=$(curl -H "Authorization: bearer  ${{steps.script.outputs.TOKEN}}" ${{steps.script.outputs.IDTOKENURL}}  -H "Accept: application/json; api-version=2.0" -H "Content-Type: application/json" -d "{}" | jq -r '.value')
-            echo $IDTOKEN
-            jwtd() {
-                if [[ -x $(command -v jq) ]]; then
-                    jq -R 'split(".") | .[0],.[1] | @base64d | fromjson' <<< "${1}"
-                    echo "Signature: $(echo "${1}" | awk -F'.' '{print $3}')"
-                fi
-            }
-            jwtd $IDTOKEN
-            echo "idToken=${IDTOKEN}" >> $GITHUB_OUTPUT
+      - name: Fetch the ID Token
+        id: tokenid
+        run: |
+          IDTOKEN=$(curl -H "Authorization: bearer  ${{steps.script.outputs.TOKEN}}" ${{steps.script.outputs.IDTOKENURL}}  -H "Accept: application/json; api-version=2.0" -H "Content-Type: application/json" -d "{}" | jq -r '.value')
+          echo "idToken=${IDTOKEN}" >> $GITHUB_OUTPUT
 
-        - name: Fetch Access Token from Artifactory
+      - name: Fetch Access Token from cloud provider
         id: fetch_access_token
         env:
           ID_TOKEN: ${{ steps.tokenid.outputs.idToken }}
@@ -58,6 +51,5 @@ jobs:
           -X POST \
           -H "Content-type: application/json" \
           https://pace7.com/oidc/jwt \
-          -d \
-          "{\"grant_type\": \"urn:ietf:params:oauth:grant-type:token-exchange\", \"subject_token_type\":\"urn:ietf:params:oauth:token-type:id_token\", \"subject_token\": \"$ID_TOKEN\", \"provider_name\": \"YOUR_PROVIDER_NAME\"}" | jq .access_token | tr -d '"')
+          -d "{\"jwt\": \"$ID_TOKEN\"}")
           echo ACCESS_TOKEN=$ACCESS_TOKEN >> $GITHUB_OUTPUT
